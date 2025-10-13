@@ -1,4 +1,6 @@
 package nl.joozd.questionbus
 
-interface Question {
-}
+/**
+ * A Question that can be answered.
+ */
+interface Question

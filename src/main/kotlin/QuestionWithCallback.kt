@@ -1,4 +1,6 @@
 package nl.joozd.questionbus
 
-class QuestionWithCallback {
-}
+data class QuestionWithCallback<T> (
+    val question: Question,
+    val callback: (T) -> Unit
+)
