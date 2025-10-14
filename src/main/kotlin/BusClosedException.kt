@@ -1,6 +1,6 @@
 package nl.joozd.questionbus
 
-class ChannelClosedException(
-    val unSentItem: Question,
+class BusClosedException(
+    val unSentItem: Question<*>? = null,
     cause: Throwable? = null
 ): IllegalStateException("Channel Closed, could not send $unSentItem", cause)

@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     kotlin("jvm") version "2.2.20"
     id("maven-publish")
@@ -17,6 +19,9 @@ repositories {
 
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation("org.slf4j:slf4j-api:2.0.7")
+    implementation("ch.qos.logback:logback-classic:1.5.19")
+
 
     testImplementation(kotlin("test"))
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
@@ -26,6 +31,9 @@ dependencies {
 
     // (optional, nice asserts)
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+
+    // turbine for testing Flows
+    testImplementation("app.cash.turbine:turbine:1.1.0")
 }
 
 tasks.test {
@@ -33,6 +41,16 @@ tasks.test {
 }
 kotlin {
     jvmToolchain(21)
+}
+
+//val compileKotlin: KotlinCompile by tasks
+//compileKotlin.compilerOptions {
+//    freeCompilerArgs.set(listOf("-Xcontext-parameters"))
+//}
+
+
+tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions.freeCompilerArgs.add("-Xcontext-parameters")
 }
 
 val sourceJar by tasks.registering(Jar::class) {
