@@ -6,7 +6,7 @@ plugins {
     id("org.jetbrains.dokka") version "2.0.0"
 }
 
-val versionName = "0.1-beta"
+val versionName = "0.1.1-beta"
 val groupID = "nl.joozd.questionbus"
 
 group = groupID
@@ -20,7 +20,7 @@ repositories {
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     implementation("org.slf4j:slf4j-api:2.0.7")
-    implementation("ch.qos.logback:logback-classic:1.5.19")
+    testImplementation("ch.qos.logback:logback-classic:1.5.19")
 
 
     testImplementation(kotlin("test"))
@@ -83,7 +83,7 @@ dokka {
         includes.from("README.md")
 
         // JDK target
-        jdkVersion.set(17)
+        jdkVersion.set(21)
 
         // Source links (use helper that wraps URI in v2)
         sourceLink {
