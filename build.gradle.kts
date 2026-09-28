@@ -1,12 +1,12 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "2.2.20"
+    kotlin("jvm") version "2.4.20"
     id("maven-publish")
-    id("org.jetbrains.dokka") version "2.0.0"
+    id("org.jetbrains.dokka") version "2.2.0"
 }
 
-val versionName = "0.1.1-beta"
+val versionName = "0.1.2-beta"
 val groupID = "nl.joozd.questionbus"
 
 group = groupID
@@ -18,109 +18,78 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
-    implementation("org.slf4j:slf4j-api:2.0.7")
-    testImplementation("ch.qos.logback:logback-classic:1.5.19")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+    implementation("org.slf4j:slf4j-api:2.0.20")
 
+    testImplementation("ch.qos.logback:logback-classic:1.6.4")
 
     testImplementation(kotlin("test"))
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 
     // Coroutines test utilities
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
 
-    // (optional, nice asserts)
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    // Optional, nice asserts
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
 
-    // turbine for testing Flows
-    testImplementation("app.cash.turbine:turbine:1.1.0")
+    // Turbine for testing Flows
+    testImplementation("app.cash.turbine:turbine:1.2.1")
 }
 
-tasks.test {
-    useJUnitPlatform()
-}
 kotlin {
     jvmToolchain(21)
 }
-
-//val compileKotlin: KotlinCompile by tasks
-//compileKotlin.compilerOptions {
-//    freeCompilerArgs.set(listOf("-Xcontext-parameters"))
-//}
-
 
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions.freeCompilerArgs.add("-Xcontext-parameters")
 }
 
-val sourceJar by tasks.registering(Jar::class) {
+tasks.test {
+    useJUnitPlatform()
+}
+
+val sourceJar = tasks.register<Jar>("sourceJar") {
+    description = "Packages the main source files into a sources JAR."
+    group = "build"
+
     archiveClassifier.set("sources")
     from(sourceSets.named("main").map { it.allSource })
 }
 
+
 /**
- * Dokka v2 — central configuration
+ * Dokka configuration.
  */
 dokka {
-    // Shown in the docs header
     moduleName.set("QuestionBus")
 
-    // HTML output (your previous build/docs location)
     dokkaPublications.html {
         outputDirectory.set(layout.buildDirectory.dir("docs"))
-        // Optional: fail the build on Dokka warnings
-        // failOnWarning.set(true)
-        // Optional: suppress inherited members, etc.
-        // suppressInheritedMembers.set(true)
-    }
-
-    // Also emit Javadoc-format output when the javadoc plugin is applied
-    dokkaPublications.findByName("javadoc")?.apply {
-        outputDirectory.set(layout.buildDirectory.dir("javadoc"))
     }
 
     dokkaSourceSets.main {
         includes.from("README.md")
 
-        // JDK target
         jdkVersion.set(21)
 
-        // Source links (use helper that wraps URI in v2)
         sourceLink {
             localDirectory.set(file("src/main/kotlin"))
             remoteUrl("https://github.com/Joozd/questionbus/tree/master/src/main/kotlin")
             remoteLineSuffix.set("#L")
         }
-
-        // Typical v2 tweaks you might want:
-        // reportUndocumented.set(true)
-        // documentedVisibilities(VisibilityModifier.Public)
     }
-
-    // Example for custom assets/styles in v2 (type-safe)
-    // pluginsConfiguration.html {
-    //     customAssets.from("docs/logo.png")
-    //     customStyleSheets.from("docs/styles.css")
-    // }
 }
 
 /**
- * Package Dokka outputs as jars (v2)
- * The single `dokkaGenerate` task produces the configured publications.
+ * Packages the generated Dokka HTML documentation.
  */
-val dokkaGenerate = tasks.named("dokkaGenerate")
+val dokkaHtmlJar = tasks.register<Jar>("dokkaHtmlJar") {
+    description = "Packages the generated Dokka HTML documentation into a JAR."
+    group = "documentation"
 
-val dokkaHtmlJar by tasks.registering(Jar::class) {
-    dependsOn(dokkaGenerate)
+    dependsOn(tasks.named("dokkaGenerate"))
     archiveClassifier.set("html-docs")
     from(layout.buildDirectory.dir("docs"))
-}
-
-val dokkaJavadocJar by tasks.registering(Jar::class) {
-    // Only meaningful if org.jetbrains.dokka-javadoc is applied
-    dependsOn(dokkaGenerate)
-    archiveClassifier.set("javadoc")
-    from(layout.buildDirectory.dir("javadoc"))
 }
 
 publishing {
@@ -134,15 +103,12 @@ publishing {
 
             artifact(sourceJar.get())
             artifact(dokkaHtmlJar.get())
-            // Attach Javadoc JAR only if present (plugin applied)
-            if (plugins.hasPlugin("org.jetbrains.dokka-javadoc")) {
-                artifact(dokkaJavadocJar.get())
-            }
 
             pom {
                 name.set("QuestionBus")
-                description.set("A Bus for aswking questions and getting answers")
+                description.set("A bus for asking questions and getting answers")
                 url.set("https://github.com/Joozd/questionbus")
+
                 licenses {
                     license {
                         name.set("Apache License 2.0")
@@ -153,12 +119,24 @@ publishing {
             }
         }
     }
+
     repositories {
         maven {
-            url = uri("https://joozd.nl/nexus/repository/maven-releases/")
+            name = "reposilite"
+
+            url = uri(
+                if (versionName.endsWith("-SNAPSHOT")) {
+                    "https://repo.joozd.nl/snapshots"
+                } else {
+                    "https://repo.joozd.nl/releases"
+                }
+            )
+
             credentials {
-                username = (findProperty("nexusUsername") ?: System.getenv("NEXUS_USERNAME") ?: "").toString()
-                password = (findProperty("nexusPassword") ?: System.getenv("NEXUS_PASSWORD") ?: "").toString()
+                username = findProperty("repoUsername")?.toString()
+                    ?: error("Missing Gradle property: repoUsername")
+                password = findProperty("repoPassword")?.toString()
+                    ?: error("Missing Gradle property: repoPassword")
             }
         }
     }
